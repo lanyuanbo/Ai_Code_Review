@@ -9,7 +9,7 @@ import textwrap
 from pathlib import Path
 from typing import List, Tuple
 
-DIFF_DISPLAY_LIMIT = 8000
+DIFF_DISPLAY_LIMIT = 8000  # characters kept from the diff to keep console output concise
 
 REPO_ROOT = Path(__file__).resolve().parent
 
@@ -35,27 +35,30 @@ def list_branches() -> List[str]:
 
 
 def select_branch(branches: List[str], label: str) -> str:
-    print(f"\n选择{label}分支：")
+    print(f"\n选择{label}分支 / Select {label} branch:")
     for idx, name in enumerate(branches, 1):
         print(f" [{idx}] {name}")
 
     while True:
-        value = input(f"请输入 {label} 序号 (1-{len(branches)}): ").strip()
+        value = input(f"请输入 {label} 序号 (1-{len(branches)}) / Enter number: ").strip()
         try:
             choice = int(value)
         except ValueError:
-            print("请输入有效序号。")
+            print("请输入有效序号 / Enter a valid number.")
             continue
         if 1 <= choice <= len(branches):
             return branches[choice - 1]
-        print("序号超出范围，请重试。")
+        print("序号超出范围，请重试 / Choice out of range, try again.")
 
 
 def read_prompt() -> str:
-    print("\n输入自定义提示词（空行结束）：")
+    print("\n输入自定义提示词（空行结束）/ Enter custom prompt (blank line to finish):")
     lines: List[str] = []
     while True:
-        line = input()
+        try:
+            line = input()
+        except EOFError:
+            break
         if line == "":
             break
         lines.append(line)
@@ -71,29 +74,29 @@ def diff_between_branches(source: str, target: str) -> Tuple[str, str]:
 
 def build_review(prompt: str, source: str, target: str, stat: str, diff: str) -> str:
     if not stat and not diff:
-        return f"分支 {source} 与 {target} 之间没有差异。"
+        return f"分支 {source} 与 {target} 之间没有差异 / No differences between {source} and {target}."
 
     limited_diff = diff
     if len(diff) > DIFF_DISPLAY_LIMIT:
-        limited_diff = diff[:DIFF_DISPLAY_LIMIT] + "\n... 剩余 diff 已截断以保持输出简洁 ..."
+        limited_diff = diff[:DIFF_DISPLAY_LIMIT] + "\n... 剩余 diff 已截断以保持输出简洁 / diff truncated for brevity ..."
 
     return textwrap.dedent(
         f"""
         === 按提示词进行 Code Review ===
-        自定义提示词:
+        自定义提示词 / Custom prompt:
         {prompt or "(未提供提示词)"}
 
-        对比分支: {source} -> {target}
+        对比分支 / Comparing: {source} -> {target}
 
-        变更摘要:
-        {stat or "无文件变化"}
+        变更摘要 / Summary:
+        {stat or "无文件变化 / No file changes"}
 
-        Review 提示:
-        - 根据自定义提示词重点关注潜在风险与需求要点
-        - 如需进一步分析，请查看下面的详细 diff
+        Review 提示 / Guidance:
+        - 根据自定义提示词重点关注潜在风险与需求要点 / Focus on the concerns from the prompt
+        - 如需进一步分析，请查看下面的详细 diff / See detailed diff below for more context
 
-        详细 Diff:
-        {limited_diff or "无 diff 内容"}
+        详细 Diff / Detailed Diff:
+        {limited_diff or "无 diff 内容 / No diff content"}
         """
     ).strip()
 
@@ -114,7 +117,7 @@ def load_prompt(args: argparse.Namespace) -> str:
     if args.prompt_file:
         path = Path(args.prompt_file)
         if not path.is_file():
-            raise SystemExit(f"提示词文件不存在: {path}")
+            raise SystemExit(f"提示词文件不存在 / Prompt file not found: {path}")
         return path.read_text(encoding="utf-8").strip()
     return ""
 
@@ -125,10 +128,10 @@ def main() -> None:
     if not branches:
         raise SystemExit("未检测到 git 分支，请确认当前目录是有效的 git 仓库。")
 
-    source = args.source or select_branch(branches, "起始")
-    target = args.target or select_branch(branches, "目标")
+    source = args.source or select_branch(branches, "起始/Source")
+    target = args.target or select_branch(branches, "目标/Target")
     if source == target:
-        raise SystemExit("起始分支与目标分支相同，无需比较。")
+        raise SystemExit("起始分支与目标分支相同，无需比较 / Source and target branches are identical.")
 
     prompt = load_prompt(args) or read_prompt()
     if not prompt:
