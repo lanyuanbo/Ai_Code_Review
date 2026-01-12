@@ -18,6 +18,21 @@ def _run_git(args: List[str]) -> str:
     return subprocess.check_output(["git", *args], cwd=REPO_ROOT, text=True)
 
 
+def validate_ref_name(ref: str) -> str:
+    if not ref or ref.startswith("-") or any(ch.isspace() for ch in ref):
+        raise SystemExit(f"无效的分支名称 / Invalid branch name: {ref!r}")
+    return ref
+
+
+def safe_output_path(path_str: str) -> Path:
+    path = Path(path_str).expanduser().resolve()
+    if path.is_dir():
+        raise SystemExit(f"输出路径指向目录 / Output path is a directory: {path}")
+    if not path.parent.exists():
+        raise SystemExit(f"输出目录不存在 / Output directory does not exist: {path.parent}")
+    return path
+
+
 def list_branches() -> List[str]:
     try:
         output = _run_git(["branch", "--format", "%(refname:short)"])
@@ -128,8 +143,8 @@ def main() -> None:
     if not branches:
         raise SystemExit("未检测到 git 分支，请确认当前目录是有效的 git 仓库 / No git branches detected; confirm the current directory is a valid repository.")
 
-    source = args.source or select_branch(branches, "起始/Source")
-    target = args.target or select_branch(branches, "目标/Target")
+    source = validate_ref_name(args.source or select_branch(branches, "起始/Source"))
+    target = validate_ref_name(args.target or select_branch(branches, "目标/Target"))
     if source == target:
         raise SystemExit("起始分支与目标分支相同，无需比较 / Source and target branches are identical.")
 
@@ -148,7 +163,7 @@ def main() -> None:
     print("\n" + "=" * 60)
 
     if args.output:
-        Path(args.output).write_text(review, encoding="utf-8")
+        safe_output_path(args.output).write_text(review, encoding="utf-8")
         print(f"\nReview 结果已写入: {args.output}")
 
 
