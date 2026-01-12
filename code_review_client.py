@@ -10,12 +10,14 @@ from pathlib import Path
 from typing import List, Tuple
 
 DIFF_DISPLAY_LIMIT = 8000  # characters kept from the diff to keep console output concise
+MAX_PROMPT_FILE_SIZE = 1024 * 1024  # 1 MB limit for prompt files
+GIT_TIMEOUT = 30  # seconds before git commands time out
 
 REPO_ROOT = Path(__file__).resolve().parent
 
 
 def _run_git(args: List[str]) -> str:
-    return subprocess.check_output(["git", *args], cwd=REPO_ROOT, text=True)
+    return subprocess.check_output(["git", *args], cwd=REPO_ROOT, text=True, timeout=GIT_TIMEOUT)
 
 
 def validate_ref_name(ref: str) -> str:
@@ -87,19 +89,21 @@ def diff_between_branches(source: str, target: str) -> Tuple[str, str]:
     return stat.strip(), diff.strip()
 
 
-def build_review(prompt: str, source: str, target: str, stat: str, diff: str) -> str:
+def build_review(
+    prompt: str, source: str, target: str, stat: str, diff: str, diff_limit: int = DIFF_DISPLAY_LIMIT
+) -> str:
     if not stat and not diff:
         return f"分支 {source} 与 {target} 之间没有差异 / No differences between {source} and {target}."
 
     limited_diff = diff
-    if len(diff) > DIFF_DISPLAY_LIMIT:
-        limited_diff = diff[:DIFF_DISPLAY_LIMIT] + "\n... 剩余 diff 已截断以保持输出简洁 / diff truncated for brevity ..."
+    if len(diff) > diff_limit:
+        limited_diff = diff[:diff_limit] + "\n... 剩余 diff 已截断以保持输出简洁 / diff truncated for brevity ..."
 
     return textwrap.dedent(
         f"""
         === 按提示词进行 Code Review ===
         自定义提示词 / Custom prompt:
-        {prompt or "(未提供提示词)"}
+        {prompt or "(未提供提示词) / (No prompt provided)"}
 
         对比分支 / Comparing: {source} -> {target}
 
@@ -123,6 +127,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt", dest="prompt_text", help="直接传入的提示词")
     parser.add_argument("--prompt-file", dest="prompt_file", help="包含提示词的文件路径")
     parser.add_argument("--output", dest="output", help="将 review 结果写入指定文件")
+    parser.add_argument(
+        "--diff-limit",
+        dest="diff_limit",
+        type=int,
+        default=DIFF_DISPLAY_LIMIT,
+        help="截断 diff 的最大字符数 / Maximum characters to keep from diff output",
+    )
     return parser.parse_args()
 
 
@@ -133,6 +144,10 @@ def load_prompt(args: argparse.Namespace) -> str:
         path = Path(args.prompt_file)
         if not path.is_file():
             raise SystemExit(f"提示词文件不存在 / Prompt file not found: {path}")
+        if path.stat().st_size > MAX_PROMPT_FILE_SIZE:
+            raise SystemExit(
+                f"提示词文件过大（>{MAX_PROMPT_FILE_SIZE} 字节）/ Prompt file too large (> {MAX_PROMPT_FILE_SIZE} bytes): {path}"
+            )
         return path.read_text(encoding="utf-8").strip()
     return ""
 
@@ -157,7 +172,7 @@ def main() -> None:
     except subprocess.CalledProcessError as exc:
         raise SystemExit(f"获取 diff 失败 / Failed to retrieve diff: {exc}") from exc
 
-    review = build_review(prompt, source, target, stat, diff)
+    review = build_review(prompt, source, target, stat, diff, args.diff_limit)
     print("\n" + "=" * 60 + "\n")
     print(review)
     print("\n" + "=" * 60)
