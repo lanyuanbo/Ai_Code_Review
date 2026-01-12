@@ -7,7 +7,7 @@ import argparse
 import subprocess
 import textwrap
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 DIFF_DISPLAY_LIMIT = 8000
 
@@ -62,8 +62,8 @@ def read_prompt() -> str:
     return "\n".join(lines).strip()
 
 
-def diff_between_branches(source: str, target: str) -> tuple[str, str]:
-    """Return (stat, diff) for changes needed to go from source to target (git diff source..target)."""
+def diff_between_branches(source: str, target: str) -> Tuple[str, str]:
+    """Return (stat, diff) for changes present in target relative to source (git diff source..target)."""
     stat = _run_git(["diff", f"{source}..{target}", "--stat"])
     diff = _run_git(["diff", f"{source}..{target}", "--unified=3"])
     return stat.strip(), diff.strip()
