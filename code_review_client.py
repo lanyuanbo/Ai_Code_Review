@@ -126,7 +126,7 @@ def main() -> None:
     args = parse_args()
     branches = list_branches()
     if not branches:
-        raise SystemExit("未检测到 git 分支，请确认当前目录是有效的 git 仓库。")
+        raise SystemExit("未检测到 git 分支，请确认当前目录是有效的 git 仓库 / No git branches detected; confirm the current directory is a valid repository.")
 
     source = args.source or select_branch(branches, "起始/Source")
     target = args.target or select_branch(branches, "目标/Target")
@@ -135,12 +135,12 @@ def main() -> None:
 
     prompt = load_prompt(args) or read_prompt()
     if not prompt:
-        print("未提供提示词，将使用空提示继续。")
+        print("未提供提示词，将使用空提示继续 / No prompt provided, continuing with an empty prompt.")
 
     try:
         stat, diff = diff_between_branches(source, target)
     except subprocess.CalledProcessError as exc:
-        raise SystemExit(f"获取 diff 失败: {exc}") from exc
+        raise SystemExit(f"获取 diff 失败 / Failed to retrieve diff: {exc}") from exc
 
     review = build_review(prompt, source, target, stat, diff)
     print("\n" + "=" * 60 + "\n")
