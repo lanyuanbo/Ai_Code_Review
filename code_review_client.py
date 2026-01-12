@@ -9,6 +9,8 @@ import textwrap
 from pathlib import Path
 from typing import List
 
+DIFF_DISPLAY_LIMIT = 8000
+
 REPO_ROOT = Path(__file__).resolve().parent
 
 
@@ -71,9 +73,8 @@ def build_review(prompt: str, source: str, target: str, stat: str, diff: str) ->
         return f"分支 {source} 与 {target} 之间没有差异。"
 
     limited_diff = diff
-    limit = 8000
-    if len(diff) > limit:
-        limited_diff = diff[:limit] + "\n... 剩余 diff 已截断以保持输出简洁 ..."
+    if len(diff) > DIFF_DISPLAY_LIMIT:
+        limited_diff = diff[:DIFF_DISPLAY_LIMIT] + "\n... 剩余 diff 已截断以保持输出简洁 ..."
 
     return textwrap.dedent(
         f"""
@@ -111,8 +112,9 @@ def load_prompt(args: argparse.Namespace) -> str:
         return args.prompt_text
     if args.prompt_file:
         path = Path(args.prompt_file)
-        if path.is_file():
-            return path.read_text(encoding="utf-8").strip()
+        if not path.is_file():
+            raise SystemExit(f"提示词文件不存在: {path}")
+        return path.read_text(encoding="utf-8").strip()
     return ""
 
 
