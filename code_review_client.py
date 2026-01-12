@@ -63,7 +63,7 @@ def read_prompt(initial: str | None = None) -> str:
 
 
 def diff_between_branches(source: str, target: str) -> tuple[str, str]:
-    """Return (stat, diff) for the given source/target branch pair."""
+    """Return (stat, diff) for changes needed to go from source to target (git diff source..target)."""
     stat = _run_git(["diff", f"{source}..{target}", "--stat"])
     diff = _run_git(["diff", f"{source}..{target}", "--unified=3"])
     return stat.strip(), diff.strip()
@@ -131,7 +131,10 @@ def main() -> None:
         raise SystemExit("起始分支与目标分支相同，无需比较。")
 
     preset_prompt = load_prompt(args)
-    prompt = read_prompt(preset_prompt)
+    if preset_prompt:
+        prompt = preset_prompt.strip()
+    else:
+        prompt = read_prompt()
     if not prompt:
         print("未提供提示词，将使用空提示继续。")
 
