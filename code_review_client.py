@@ -48,10 +48,7 @@ def select_branch(branches: List[str], label: str) -> str:
         print("序号超出范围，请重试。")
 
 
-def read_prompt(initial: str | None = None) -> str:
-    if initial:
-        return initial.strip()
-
+def read_prompt() -> str:
     print("\n输入自定义提示词（空行结束）：")
     lines: List[str] = []
     while True:
@@ -110,7 +107,7 @@ def parse_args() -> argparse.Namespace:
 
 def load_prompt(args: argparse.Namespace) -> str:
     if args.prompt_text:
-        return args.prompt_text
+        return args.prompt_text.strip()
     if args.prompt_file:
         path = Path(args.prompt_file)
         if not path.is_file():
@@ -132,7 +129,7 @@ def main() -> None:
 
     preset_prompt = load_prompt(args)
     if preset_prompt:
-        prompt = preset_prompt.strip()
+        prompt = preset_prompt
     else:
         prompt = read_prompt()
     if not prompt:
