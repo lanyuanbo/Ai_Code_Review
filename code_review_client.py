@@ -25,10 +25,12 @@ def list_branches() -> List[str]:
         return []
 
     branches: List[str] = []
+    seen = set()
     for line in output.splitlines():
         cleaned = line.replace("*", "").strip()
-        if cleaned and cleaned not in branches:
+        if cleaned and cleaned not in seen:
             branches.append(cleaned)
+            seen.add(cleaned)
     return branches
 
 
@@ -39,10 +41,11 @@ def select_branch(branches: List[str], label: str) -> str:
 
     while True:
         value = input(f"请输入 {label} 序号 (1-{len(branches)}): ").strip()
-        if not value.isdigit():
+        try:
+            choice = int(value)
+        except ValueError:
             print("请输入有效序号。")
             continue
-        choice = int(value)
         if 1 <= choice <= len(branches):
             return branches[choice - 1]
         print("序号超出范围，请重试。")
@@ -127,11 +130,7 @@ def main() -> None:
     if source == target:
         raise SystemExit("起始分支与目标分支相同，无需比较。")
 
-    preset_prompt = load_prompt(args)
-    if preset_prompt:
-        prompt = preset_prompt
-    else:
-        prompt = read_prompt()
+    prompt = load_prompt(args) or read_prompt()
     if not prompt:
         print("未提供提示词，将使用空提示继续。")
 
